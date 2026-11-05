@@ -359,9 +359,10 @@ function renderClose() {
       <tbody>${rows.map(x=>`<tr><td>${esc(x.name)}</td><td class="r">${x.discount?'':won(x.qty)}</td><td class="r">${won(x.amount)}</td></tr>`).join('') || '<tr><td colspan="3" class="hint">기록이 없습니다.</td></tr>'}</tbody>
       <tfoot><tr><td>합계</td><td></td><td class="r">${won(sumOf(list))}</td></tr></tfoot></table></div>
     <div class="box"><h2>내보내기</h2>
-      <p class="hint">백업 이후 바뀐 기록: ${pending}건. 하루가 끝나면 백업 파일을 다른 곳에도 보관하세요.</p>
-      <div class="row"><button class="btn primary" data-a="csv">엑셀용 CSV 저장</button><button class="btn" data-a="print">대장 인쇄</button>
-      <button class="btn" data-a="backup">백업 파일 저장</button>${navigator.canShare?'<button class="btn primary" data-a="shareBackup">백업 파일 보내기</button><button class="btn" data-a="shareCsv">CSV 공유</button>':''}</div></div></div>`;
+      <p class="hint">백업 이후 바뀐 기록: ${pending}건. ${isPhone()?'하루가 끝나면 백업 파일을 관리자에게 보내세요.':'하루가 끝나면 백업 파일을 다른 곳에도 보관하세요.'}</p>
+      <div class="row">${isPhone()
+        ? '<button class="btn primary" data-a="shareBackup">백업 파일 보내기</button>'
+        : '<button class="btn primary" data-a="backup">백업 파일 저장</button><button class="btn" data-a="csv">엑셀용 파일 저장</button><button class="btn" data-a="print">대장 인쇄</button>'}</div></div></div>`;
   renderReconResult(d);
 }
 function renderSettings() {
@@ -455,6 +456,7 @@ function buildCsv(d) {
   return '﻿' + out.map(r => r.map(csvCell).join(',')).join('\r\n');
 }
 function fileName(d, ext) { return `${state.eventName}_판매대장_${d==='all'?'전체':d}${state.device?'_'+state.device:''}.${ext}`.replace(/[\\/:*?"<>|\s]+/g,'_'); }
+function isPhone() { return !!navigator.canShare && /Android|iPhone|iPad/i.test(navigator.userAgent); }
 function backupData() {
   const now = Date.now();
   const {eventName, device, products, sales, recon} = state;
@@ -579,11 +581,6 @@ const actions = {
   },
   saleDetail,
   csv() { download(fileName(closeDate,'csv'), buildCsv(closeDate), 'text/csv;charset=utf-8'); },
-  async shareCsv() {
-    const file = new File([buildCsv(closeDate)], fileName(closeDate,'csv'), {type:'text/csv'});
-    if (navigator.canShare({files:[file]})) { try { await navigator.share({files:[file], title:file.name}); } catch (e) { /* 사용자가 공유창을 닫음 */ } }
-    else alert('이 기기는 파일 공유를 지원하지 않습니다. CSV 저장을 사용하세요.');
-  },
   print() { buildPrint(closeDate); window.print(); },
   backup() {
     const b = backupData();
