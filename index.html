@@ -145,7 +145,7 @@ dialog label input{display:block;width:100%;margin-top:4px;font-size:18px;color:
 <div id="toast" role="status"><span id="toastMsg"></span><button data-a="undo">되돌리기</button></div>
 <dialog id="dlg"></dialog>
 <div id="print"></div>
-<input type="file" id="importFile" accept=".json,application/json" hidden>
+<input type="file" id="importFile" accept=".json,.txt,application/json,text/plain" hidden>
 <script>
 (() => {
 'use strict';
@@ -586,8 +586,9 @@ const actions = {
   },
   async shareBackup() {
     const b = backupData();
-    const file = new File([b.text], b.name, {type:'application/json'});
-    if (!navigator.canShare({files:[file]})) { alert('이 기기는 파일 공유를 지원하지 않습니다. 백업 파일 저장을 사용하세요.'); return; }
+    // 휴대폰 공유창은 JSON 파일을 받지 않으므로 같은 내용을 .txt로 보냅니다. 불러오기는 .txt도 받습니다.
+    const file = new File([b.text], b.name.replace(/\.json$/, '.txt'), {type:'text/plain'});
+    if (!navigator.canShare({files:[file]})) { alert('이 기기는 파일 공유를 지원하지 않습니다.'); return; }
     try { await navigator.share({files:[file], title:b.name}); state.lastBackup = b.now; save(); render(); }
     catch (e) { /* 사용자가 공유창을 닫음 */ }
   },
