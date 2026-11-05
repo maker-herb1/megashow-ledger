@@ -588,9 +588,14 @@ const actions = {
     const b = backupData();
     // 휴대폰 공유창은 JSON 파일을 받지 않으므로 같은 내용을 .txt로 보냅니다. 불러오기는 .txt도 받습니다.
     const file = new File([b.text], b.name.replace(/\.json$/, '.txt'), {type:'text/plain'});
-    if (!navigator.canShare({files:[file]})) { alert('이 기기는 파일 공유를 지원하지 않습니다.'); return; }
+    if (!navigator.canShare({files:[file]})) {
+      download(file.name, b.text, 'text/plain');
+      state.lastBackup = b.now; save(); render();
+      alert('이 브라우저는 파일 공유가 되지 않아 다운로드 폴더에 저장했습니다. 파일 앱에서 ' + file.name + ' 파일을 카카오톡으로 보내세요.');
+      return;
+    }
     try { await navigator.share({files:[file], title:b.name}); state.lastBackup = b.now; save(); render(); }
-    catch (e) { /* 사용자가 공유창을 닫음 */ }
+    catch (e) { if (e && e.name !== 'AbortError') alert('보내기에 실패했습니다: ' + e.message); }
   },
   saveProducts() {
     const lines = $('prodText').value.split(/\r?\n/).map(s => s.trim()).filter(Boolean), out = [], seen = new Set();
