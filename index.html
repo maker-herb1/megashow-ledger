@@ -149,7 +149,7 @@ dialog label input{display:block;width:100%;margin-top:4px;font-size:18px;color:
 <script>
 (() => {
 'use strict';
-const APP_VERSION = '2026-11-06.1';
+const APP_VERSION = '2026-11-06.2';
 const KEY = 'megashow-ledger-v1';
 const PAYS = ['카드', '현금', '계좌이체'];
 const TABS = [['sale', '판매'], ['history', '내역'], ['close', '마감'], ['settings', '설정']];
@@ -659,7 +659,9 @@ const actions = {
   saveSync() {
     state.syncUrl = $('syncUrl').value.trim(); state.syncKey = $('syncKey').value.trim();
     if (state.syncUrl && !/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(state.syncUrl)) { alert('전송 주소는 https://script.google.com/macros/s/…/exec 형태여야 합니다.'); return; }
-    state.syncErr = ''; save(); render(); showToast(state.syncUrl ? '자동 전송을 켰습니다.' : '자동 전송을 껐습니다.');
+    if (state.syncUrl) state.sales.forEach(x => { state.outbox[x.id] = JSON.parse(JSON.stringify(x)); });
+    state.syncErr = ''; save(); render();
+    showToast(state.syncUrl ? `자동 전송을 켰습니다. 기존 기록 ${state.sales.length}건도 보냅니다.` : '자동 전송을 껐습니다.');
     if (state.syncUrl) scheduleSync(300);
   },
   async testSync() {
