@@ -41,10 +41,11 @@ main.sale{overflow:hidden;display:flex;flex-direction:column}
 .tile{position:relative;height:100%;min-height:76px;padding:10px 12px;background:#fff;border:1px solid #d7dbe0;border-radius:12px;text-align:left;display:flex;flex-direction:column;justify-content:center;gap:4px}
 .tile.in{border-color:var(--blue);box-shadow:inset 0 0 0 1px var(--blue)}
 .tile:active{filter:brightness(.9)}
-.tile .n{font-weight:700;font-size:16px;line-height:1.25;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;letter-spacing:-.3px}
+.tile .n{font-weight:700;font-size:17px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.3px}
 .tile .p{font-size:17px;line-height:1.2;font-weight:400;white-space:nowrap;font-variant-numeric:tabular-nums}
 .chk{position:absolute;right:10px;bottom:10px;width:22px;height:22px;border-radius:50%;background:var(--blue)}
-.tile .p{padding-right:28px}
+.tile .p{padding-right:28px;overflow:hidden;text-overflow:ellipsis}
+.tile .p small{font-size:13px;color:#6b7280;margin-left:2px}
 .tile.other:disabled{color:#9ca3af}
 .tile.other{background:#fff;border:1px dashed #9ca3af;justify-content:center;text-align:center;font-weight:600}
 .foot{background:var(--card);border-top:2px solid #c8cdd5;padding:4px 12px calc(10px + env(safe-area-inset-bottom))}
@@ -153,7 +154,7 @@ dialog label input{display:block;width:100%;margin-top:4px;font-size:18px;color:
 <script>
 (() => {
 'use strict';
-const APP_VERSION = '2026-11-06.7';
+const APP_VERSION = '2026-11-06.8';
 const KEY = 'megashow-ledger-v1';
 const PAYS = ['카드', '현금', '계좌이체'];
 const TABS = [['sale', '판매'], ['history', '내역'], ['close', '마감'], ['settings', '설정']];
@@ -253,7 +254,12 @@ function groupOf(name) {
   if (/환|라이블리|맨피던스|속풀강황/.test(name)) return '환';
   return '기타';
 }
-// 상품 칸에는 포수와 용량을 뺀 이름만 보여 줍니다. 기록에는 전체 이름이 남습니다.
+// 상품 칸은 한 줄 이름 + "금액 · 포수/용량"으로 나눕니다. 기록에는 전체 이름이 남습니다.
+function splitName(name) {
+  const m = name.match(/^(.+?)\s*(?:\(([^()]+)\)|,\s*(.+))$/);
+  return m ? {base: m[1], spec: m[2] || m[3]} : {base: name, spec: ''};
+}
+// 결제 확인 화면에는 더 짧은 이름을 씁니다.
 function shortName(name) {
   const m = name.match(/^(.+?)(?:\(([^()]+)\)|,\s*(.+))$/);
   return (m ? m[1] : name).replace(/^실속있는/, '실속').replace(/^전통쌍화차고명/, '쌍화차고명');
@@ -264,9 +270,9 @@ function renderSale() {
   const qty = {}; state.cart.forEach(l => qty[l.key] = l.qty);
   // 상품 칸: 흰 상자, 차 → 농축 → 환 순서로 모아 배치(묶음 안은 제품 목록 순서), 포수·용량이 있는 전체 이름을 굵게.
   // 선택하면 얇은 파란 테두리와 오른쪽 위 파란 체크가 붙고, 다시 누르면 해제됩니다. 수량은 결제 확인 화면에서 바꿉니다.
-  const tile = p => `<button class="tile${qty[p.id]?' in':''}" data-a="add" data-v="${esc(p.id)}">
-      <span class="n">${esc(p.name)}</span><span class="p">${won(p.price)}원</span>
-      ${qty[p.id]?'<svg class="chk" viewBox="0 0 24 24" aria-label="선택됨"><path d="M6 12.5l4 4L18 8" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>':''}</button>`;
+  const tile = p => { const {base, spec} = splitName(p.name); return `<button class="tile${qty[p.id]?' in':''}" data-a="add" data-v="${esc(p.id)}">
+      <span class="n">${esc(base)}</span><span class="p">${won(p.price)}원${spec?`<small>· ${esc(spec)}</small>`:''}</span>
+      ${qty[p.id]?'<svg class="chk" viewBox="0 0 24 24" aria-label="선택됨"><path d="M6 12.5l4 4L18 8" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>':''}</button>`; };
   const ordered = GROUPS.flatMap(g => state.products.filter(p => groupOf(p.name) === g));
   const sections = `<div class="grid">${ordered.map(tile).join('')}<button class="tile other" data-a="custom">+ 직접 입력</button><button class="tile other" data-a="clear"${state.cart.length?'':' disabled'}>선택 해제</button></div>`;
   const count = state.cart.filter(l => l.key !== DISCOUNT).reduce((a, l) => a + l.qty, 0);
