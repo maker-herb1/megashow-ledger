@@ -354,7 +354,7 @@ function renderClose() {
     <div class="box"><h2>내보내기</h2>
       <p class="hint">백업 이후 바뀐 기록: ${pending}건. 하루가 끝나면 백업 파일을 다른 곳에도 보관하세요.</p>
       <div class="row"><button class="btn primary" data-a="csv">엑셀용 CSV 저장</button><button class="btn" data-a="print">대장 인쇄</button>
-      <button class="btn" data-a="backup">백업 파일 저장</button>${navigator.canShare?'<button class="btn" data-a="shareCsv">CSV 공유</button>':''}</div></div></div>`;
+      <button class="btn" data-a="backup">백업 파일 저장</button>${navigator.canShare?'<button class="btn primary" data-a="shareBackup">백업 파일 보내기</button><button class="btn" data-a="shareCsv">CSV 공유</button>':''}</div></div></div>`;
   renderReconResult(d);
 }
 function renderSettings() {
@@ -448,6 +448,12 @@ function buildCsv(d) {
   return '﻿' + out.map(r => r.map(csvCell).join(',')).join('\r\n');
 }
 function fileName(d, ext) { return `${state.eventName}_판매대장_${d==='all'?'전체':d}${state.device?'_'+state.device:''}.${ext}`.replace(/[\\/:*?"<>|\s]+/g,'_'); }
+function backupData() {
+  const now = Date.now();
+  const {eventName, device, products, sales, recon} = state;
+  return { now, name: fileName('all','json').replace('판매대장','백업'),
+    text: JSON.stringify({app:'megashow-ledger', version:1, exportedAt:now, eventName, device, products, sales, recon}, null, 1) };
+}
 function download(name, text, type) {
   const url = URL.createObjectURL(new Blob([text], {type}));
   const a = document.createElement('a'); a.href = url; a.download = name;
@@ -568,10 +574,16 @@ const actions = {
   },
   print() { buildPrint(closeDate); window.print(); },
   backup() {
-    const now = Date.now();
-    const {eventName, device, products, sales, recon} = state;
-    download(fileName('all','json').replace('판매대장','백업'), JSON.stringify({app:'megashow-ledger', version:1, exportedAt:now, eventName, device, products, sales, recon}, null, 1), 'application/json');
-    state.lastBackup = now; save(); render();
+    const b = backupData();
+    download(b.name, b.text, 'application/json');
+    state.lastBackup = b.now; save(); render();
+  },
+  async shareBackup() {
+    const b = backupData();
+    const file = new File([b.text], b.name, {type:'application/json'});
+    if (!navigator.canShare({files:[file]})) { alert('이 기기는 파일 공유를 지원하지 않습니다. 백업 파일 저장을 사용하세요.'); return; }
+    try { await navigator.share({files:[file], title:b.name}); state.lastBackup = b.now; save(); render(); }
+    catch (e) { /* 사용자가 공유창을 닫음 */ }
   },
   saveProducts() {
     const lines = $('prodText').value.split(/\r?\n/).map(s => s.trim()).filter(Boolean), out = [], seen = new Set();
