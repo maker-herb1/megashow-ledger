@@ -145,10 +145,11 @@ dialog label input{display:block;width:100%;margin-top:4px;font-size:18px;color:
 <div id="toast" role="status"><span id="toastMsg"></span><button data-a="undo">되돌리기</button></div>
 <dialog id="dlg"></dialog>
 <div id="print"></div>
-<input type="file" id="importFile" accept=".json,.txt,application/json,text/plain" hidden>
+<input type="file" id="importFile" accept=".json,.txt,.csv,application/json,text/plain,text/csv" hidden>
 <script>
 (() => {
 'use strict';
+const APP_VERSION = '2026-11-05.8';
 const KEY = 'megashow-ledger-v1';
 const PAYS = ['카드', '현금', '계좌이체'];
 const TABS = [['sale', '판매'], ['history', '내역'], ['close', '마감'], ['settings', '설정']];
@@ -379,7 +380,8 @@ function renderSettings() {
       <p class="hint">백업 파일을 불러오면 기록을 지우지 않고 합칩니다. 여러 기기의 기록을 한 기기로 모을 때도 씁니다.</p>
       <button class="btn" data-a="import">백업 파일 불러오기</button></div>
     <div class="box"><h2>기록 비우기</h2><p class="hint">연습으로 입력한 기록을 행사 전에 지울 때 씁니다. 제품 목록은 남습니다.</p>
-      <button class="btn danger" data-a="wipe">판매 기록 전체 삭제</button></div></div>`;
+      <button class="btn danger" data-a="wipe">판매 기록 전체 삭제</button></div>
+    <p class="hint" style="text-align:center;margin:12px 0 4px">앱 버전 ${APP_VERSION}</p></div>`;
 }
 
 /* ---------- 입력창 ---------- */
@@ -586,9 +588,9 @@ const actions = {
   },
   async shareBackup() {
     const b = backupData();
-    // 휴대폰 공유창은 JSON 파일을 받지 않고, 카카오톡은 text/plain을 글자 메시지로 취급해 파일을 버립니다.
-    // CSV와 같은 종류(text/csv)로 표시하고 파일명은 .txt로 보냅니다. 불러오기는 .txt도 받습니다.
-    const file = new File([b.text], b.name.replace(/\.json$/, '.txt'), {type:'text/csv'});
+    // 휴대폰 공유창은 JSON 파일을 받지 않고, 카카오톡은 .txt를 글자 메시지로 취급해 파일을 버립니다.
+    // CSV 파일은 카톡에 파일로 오는 것이 확인되어 백업도 .csv 이름으로 보냅니다. 내용은 백업(JSON)이며 불러오기가 그대로 읽습니다.
+    const file = new File([b.text], b.name.replace(/\.json$/, '.csv'), {type:'text/csv'});
     if (!navigator.canShare({files:[file]})) {
       download(file.name, b.text, 'text/plain');
       state.lastBackup = b.now; save(); render();
