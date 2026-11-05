@@ -149,7 +149,7 @@ dialog label input{display:block;width:100%;margin-top:4px;font-size:18px;color:
 <script>
 (() => {
 'use strict';
-const APP_VERSION = '2026-11-05.9';
+const APP_VERSION = '2026-11-05.10';
 const KEY = 'megashow-ledger-v1';
 const PAYS = ['카드', '현금', '계좌이체'];
 const TABS = [['sale', '판매'], ['history', '내역'], ['close', '마감'], ['settings', '설정']];
@@ -360,9 +360,9 @@ function renderClose() {
       <tbody>${rows.map(x=>`<tr><td>${esc(x.name)}</td><td class="r">${x.discount?'':won(x.qty)}</td><td class="r">${won(x.amount)}</td></tr>`).join('') || '<tr><td colspan="3" class="hint">기록이 없습니다.</td></tr>'}</tbody>
       <tfoot><tr><td>합계</td><td></td><td class="r">${won(sumOf(list))}</td></tr></tfoot></table></div>
     <div class="box"><h2>내보내기</h2>
-      <p class="hint">백업 이후 바뀐 기록: ${pending}건. ${isPhone()?'하루가 끝나면 백업 파일을 관리자에게 보내세요.':'하루가 끝나면 백업 파일을 다른 곳에도 보관하세요.'}</p>
+      <p class="hint">백업 이후 바뀐 기록: ${pending}건. ${isPhone()?'하루가 끝나면 백업 파일을 관리자에게 보내세요. 카카오톡은 "저장" 후 카톡에서 + → 파일로 첨부하고, 텔레그램·Gmail·드라이브는 "보내기"로 바로 보냅니다.':'하루가 끝나면 백업 파일을 다른 곳에도 보관하세요.'}</p>
       <div class="row">${isPhone()
-        ? '<button class="btn primary" data-a="shareBackup">백업 파일 보내기</button>'
+        ? '<button class="btn primary" data-a="backup">백업 파일 저장</button><button class="btn" data-a="shareBackup">백업 파일 보내기</button>'
         : '<button class="btn primary" data-a="backup">백업 파일 저장</button><button class="btn" data-a="csv">엑셀용 파일 저장</button><button class="btn" data-a="print">대장 인쇄</button>'}</div></div></div>`;
   renderReconResult(d);
 }
