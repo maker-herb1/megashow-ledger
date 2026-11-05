@@ -586,8 +586,9 @@ const actions = {
   },
   async shareBackup() {
     const b = backupData();
-    // 휴대폰 공유창은 JSON 파일을 받지 않으므로 같은 내용을 .txt로 보냅니다. 불러오기는 .txt도 받습니다.
-    const file = new File([b.text], b.name.replace(/\.json$/, '.txt'), {type:'text/plain'});
+    // 휴대폰 공유창은 JSON 파일을 받지 않고, 카카오톡은 text/plain을 글자 메시지로 취급해 파일을 버립니다.
+    // CSV와 같은 종류(text/csv)로 표시하고 파일명은 .txt로 보냅니다. 불러오기는 .txt도 받습니다.
+    const file = new File([b.text], b.name.replace(/\.json$/, '.txt'), {type:'text/csv'});
     if (!navigator.canShare({files:[file]})) {
       download(file.name, b.text, 'text/plain');
       state.lastBackup = b.now; save(); render();
