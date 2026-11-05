@@ -497,10 +497,7 @@ function importBackup(text) {
     else if ((s.updatedAt || s.ts) > (state.sales[i].updatedAt || state.sales[i].ts)) { state.sales[i] = s; updated++; }
   });
   Object.entries(data.recon || {}).forEach(([k, v]) => { if (!state.recon[k]) state.recon[k] = v; });
-  if (Array.isArray(data.products) && data.products.length && confirm('백업 파일의 제품 목록으로 이 기기의 제품 목록을 바꿀까요?')) {
-    state.products = data.products.filter(p => p && typeof p.name === 'string' && Number.isFinite(p.price));
-    state.cart = [];
-  }
+  // 제품 목록은 바꾸지 않습니다. 기기마다 같은 목록을 쓰므로 판매 기록만 합칩니다.
   save(); render();
   alert(`기록 ${added}건을 새로 추가하고 ${updated}건을 갱신했습니다.`);
 }
