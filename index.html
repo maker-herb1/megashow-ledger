@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="판매대장">
-<meta name="theme-color" content="#1f2937">
+<meta name="theme-color" content="#ffffff">
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>메가쇼 판매대장</title>
@@ -20,9 +20,10 @@ button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 button:disabled{cursor:not-allowed}
 #app{height:100vh;height:100dvh;display:flex;flex-direction:column}
-header{background:var(--top);color:#fff;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+header{background:var(--card);color:var(--ink);padding:8px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px;border-bottom:1px solid var(--line)}
 .hl{display:flex;align-items:center;gap:6px;min-width:0}
-#back{background:none;border:0;color:#fff;font-size:24px;line-height:1;padding:0 8px 2px 0}
+#back{background:none;border:0;color:var(--ink);font-size:24px;line-height:1;padding:0 8px 2px 0}
+#today{color:#374151}
 header strong{font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #today{font-size:15px;white-space:nowrap;font-variant-numeric:tabular-nums}
 nav{display:flex;background:var(--card);border-bottom:1px solid var(--line)}
@@ -150,7 +151,7 @@ dialog label input{display:block;width:100%;margin-top:4px;font-size:18px;color:
 <script>
 (() => {
 'use strict';
-const APP_VERSION = '2026-11-06.5';
+const APP_VERSION = '2026-11-06.6';
 const KEY = 'megashow-ledger-v1';
 const PAYS = ['카드', '현금', '계좌이체'];
 const TABS = [['sale', '판매'], ['history', '내역'], ['close', '마감'], ['settings', '설정']];
