@@ -83,6 +83,7 @@ main.sale{overflow:hidden;display:flex;flex-direction:column}
 .method.on{font-weight:700;border-width:2px}
 .method.m0.on{border-color:var(--blue);background:#dbeafe;color:var(--blue)}
 .method.m1.on{border-color:var(--green);background:#d1fae5;color:var(--green)}
+.method.m3.on{background:var(--red);border-color:var(--red);color:#fff}
 .method.m2.on{border-color:var(--violet);background:#ede9fe;color:var(--violet)}
 .memo{width:100%;margin-top:6px}
 .dcin,.memo{height:40px;padding:4px 10px;font-size:15px}
@@ -149,7 +150,7 @@ dialog label input{display:block;width:100%;margin-top:4px;font-size:18px;color:
 <script>
 (() => {
 'use strict';
-const APP_VERSION = '2026-11-06.2';
+const APP_VERSION = '2026-11-06.3';
 const KEY = 'megashow-ledger-v1';
 const PAYS = ['카드', '현금', '계좌이체'];
 const TABS = [['sale', '판매'], ['history', '내역'], ['close', '마감'], ['settings', '설정']];
@@ -197,6 +198,7 @@ function isGift() {
   const dcLine = state.cart.find(l => l.key === DISCOUNT);
   return !!dcLine && sub > 0 && -dcLine.price === sub && state.memo.trim() === '증정';
 }
+function fixMethod() { if (state.method === '증정' && !isGift()) state.method = '카드'; }
 function canPay() { return state.cart.some(l => l.key !== DISCOUNT) && cartTotal() >= 0; }
 function matches(s, d) { return d === 'all' || s.date === d; }
 function salesOf(d) { return state.sales.filter(s => matches(s, d)).sort((a, b) => a.ts - b.ts); }
@@ -284,6 +286,7 @@ function renderSale() {
   });
 }
 function renderCheckout() {
+  fixMethod();
   const v = $('view'); v.className = 'sale';
   const items = state.cart.filter(l => l.key !== DISCOUNT);
   const sub = items.reduce((a, l) => a + l.qty * l.price, 0);
@@ -304,7 +307,9 @@ function renderCheckout() {
         <div class="kv final"><span>받을 금액</span><b id="finalAmt">${won(total)}원</b></div>
       </div>
       <div class="box"><h2>결제 수단</h2>
-        <div class="methods">${PAYS.map((p, i) => `<button class="method m${i}${p===state.method?' on':''}" data-a="setMethod" data-v="${p}">${p}</button>`).join('')}</div>
+        <div class="methods">${isGift()
+          ? '<button class="method m3 on" type="button" disabled>증정 (무료)</button>'
+          : PAYS.map((p, i) => `<button class="method m${i}${p===state.method?' on':''}" data-a="setMethod" data-v="${p}">${p}</button>`).join('')}</div>
         <input class="memo" id="memo" placeholder="메모 (선택) 예: 단골, 택배 발송 요청" value="${esc(state.memo)}" autocomplete="off">
       </div>
       <button class="btn" data-a="clear">담은 상품 모두 비우기</button>
@@ -576,8 +581,8 @@ const actions = {
   rm(i) { state.cart.splice(i, 1); dropOrphanDiscount(); save(); render(); },
   clear() { state.cart = []; state.memo = ''; save(); closeCheckout(); render(); },
   gift() {
-    if (isGift()) { setDiscount(0); state.memo = ''; }
-    else { setDiscount(state.cart.filter(l => l.key !== DISCOUNT).reduce((a, l) => a + l.qty * l.price, 0)); state.memo = '증정'; }
+    if (isGift()) { setDiscount(0); state.memo = ''; state.method = '카드'; }
+    else { setDiscount(state.cart.filter(l => l.key !== DISCOUNT).reduce((a, l) => a + l.qty * l.price, 0)); state.memo = '증정'; state.method = '증정'; }
     save(); render();
   },
   openCheckout() { hideToast(); checkout = true; history.pushState({checkout:true}, ''); render(); document.querySelector('.co').scrollTop = 0; },
