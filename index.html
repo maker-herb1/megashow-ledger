@@ -149,7 +149,7 @@ dialog label input{display:block;width:100%;margin-top:4px;font-size:18px;color:
 <script>
 (() => {
 'use strict';
-const APP_VERSION = '2026-11-05.8';
+const APP_VERSION = '2026-11-05.9';
 const KEY = 'megashow-ledger-v1';
 const PAYS = ['카드', '현금', '계좌이체'];
 const TABS = [['sale', '판매'], ['history', '내역'], ['close', '마감'], ['settings', '설정']];
@@ -597,7 +597,8 @@ const actions = {
       alert('이 브라우저는 파일 공유가 되지 않아 다운로드 폴더에 저장했습니다. 파일 앱에서 ' + file.name + ' 파일을 카카오톡으로 보내세요.');
       return;
     }
-    try { await navigator.share({files:[file]}); state.lastBackup = b.now; save(); render(); }
+    // 카카오톡은 제목 없이 파일만 공유하면 빈 메시지를 보냈으므로 CSV 공유와 같게 제목을 함께 보냅니다.
+    try { await navigator.share({files:[file], title:file.name}); state.lastBackup = b.now; save(); render(); }
     catch (e) { if (e && e.name !== 'AbortError') alert('보내기에 실패했습니다: ' + e.message); }
   },
   saveProducts() {
