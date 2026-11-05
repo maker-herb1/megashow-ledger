@@ -594,7 +594,7 @@ const actions = {
       alert('이 브라우저는 파일 공유가 되지 않아 다운로드 폴더에 저장했습니다. 파일 앱에서 ' + file.name + ' 파일을 카카오톡으로 보내세요.');
       return;
     }
-    try { await navigator.share({files:[file], title:b.name}); state.lastBackup = b.now; save(); render(); }
+    try { await navigator.share({files:[file]}); state.lastBackup = b.now; save(); render(); }
     catch (e) { if (e && e.name !== 'AbortError') alert('보내기에 실패했습니다: ' + e.message); }
   },
   saveProducts() {
