@@ -34,14 +34,14 @@ main.sale{overflow:hidden;display:flex;flex-direction:column}
 .groups{flex:1;min-height:0;overflow:auto;padding:10px}
 .groups h3{margin:12px 2px 6px;font-size:14px;font-weight:700;color:#374151}
 .groups h3:first-child{margin-top:2px}
-.grid{display:grid;grid-auto-rows:max-content;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:7px}
-.tile{position:relative;height:100%;min-height:53px;padding:4px 6px;border:1px solid rgba(0,0,0,.14);border-radius:9px;text-align:left;display:flex;flex-direction:column;justify-content:center;gap:2px}
-.wide-row{grid-column:1 / -1;display:grid;gap:7px}
-@media (min-width:600px){.wide-row{display:contents}}
+.grid{display:grid;grid-auto-rows:max-content;grid-template-columns:repeat(2,1fr);gap:10px;padding-top:4px}
+@media (min-width:600px){.grid{grid-template-columns:repeat(3,1fr)}}
+@media (min-width:900px){.grid{grid-template-columns:repeat(4,1fr)}}
+.tile{position:relative;height:100%;min-height:76px;padding:10px 12px;border:1px solid rgba(0,0,0,.14);border-radius:12px;text-align:left;display:flex;flex-direction:column;justify-content:center;gap:4px}
 .tile:active{filter:brightness(.9)}
-.tile .n{font-weight:600;font-size:16px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.3px}
-.tile .p{font-size:16px;line-height:1.2;font-weight:400;white-space:nowrap;font-variant-numeric:tabular-nums}
-.chk{position:absolute;right:1px;top:1px;width:20px;height:20px}
+.tile .n{font-weight:500;font-size:17px;line-height:1.25;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;letter-spacing:-.3px}
+.tile .p{font-size:17px;line-height:1.2;font-weight:400;white-space:nowrap;font-variant-numeric:tabular-nums}
+.badge{position:absolute;right:-6px;top:-6px;min-width:26px;height:26px;padding:0 7px;border-radius:13px;background:var(--blue);color:#fff;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(0,0,0,.25)}
 .tile.other:disabled{color:#9ca3af}
 .tile.other{background:#fff;border:1px dashed #9ca3af;justify-content:center;text-align:center;font-weight:600}
 .foot{background:var(--card);border-top:2px solid #c8cdd5;padding:4px 12px calc(10px + env(safe-area-inset-bottom))}
@@ -150,7 +150,7 @@ dialog label input{display:block;width:100%;margin-top:4px;font-size:18px;color:
 <script>
 (() => {
 'use strict';
-const APP_VERSION = '2026-11-06.4';
+const APP_VERSION = '2026-11-06.5';
 const KEY = 'megashow-ledger-v1';
 const PAYS = ['카드', '현금', '계좌이체'];
 const TABS = [['sale', '판매'], ['history', '내역'], ['close', '마감'], ['settings', '설정']];
@@ -242,11 +242,6 @@ function keepScroll(sel, fn) {
   if (now) now.scrollTop = top;
 }
 function storageAlert() { return storageFailed ? '<div class="alert">저장에 실패했습니다. 지금 바로 마감 화면에서 파일로 내보내세요.</div>' : ''; }
-// 차 묶음은 휴대폰에서 줄마다 칸 너비를 따로 나눕니다. 긴 이름의 칸을 넓힙니다.
-const WIDE_ROWS = [
-  {names:['우슬즙','벌나무헛개즙','청안비결'], cols:'.85fr 1.15fr 1fr'},
-  {names:['전통쌍화차(','전통쌍화차고명','청한차'], cols:'1fr 1.17fr .83fr'},
-];
 // 상품명으로 묶음과 바탕색을 정합니다.
 const GROUPS = [['차','#d3f5e3'],['농축','#dbe9ff'],['환','#fdf2c8'],['기타','#ffffff']];
 function groupOf(name) {
@@ -264,19 +259,13 @@ function renderSale() {
   if (checkout) { if (state.cart.length) return renderCheckout(); closeCheckout(); }
   const v = $('view'); v.className = 'sale';
   const qty = {}; state.cart.forEach(l => qty[l.key] = l.qty);
-  const tile = (p, color) => {
-    return `<button class="tile${qty[p.id]?' in':''}" style="background:${p.name.includes('쌍화차')?'#fde2ec':color}" data-a="add" data-v="${esc(p.id)}">
-      <span class="n">${esc(p.name.startsWith('전통쌍화차고명') ? '전통쌍화차고명' : shortName(p.name))}</span><span class="p">${won(p.price)}</span>
-      ${qty[p.id]?'<svg class="chk" viewBox="0 0 24 24" aria-label="선택됨"><path d="M4 13l5 5L20 6" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 13l5 5L20 6" fill="none" stroke="#dc2626" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>':''}</button>`;
-  };
-  const filled = GROUPS.map(([g, color]) => [g, color, state.products.filter(p => groupOf(p.name) === g)]).filter(x => x[2].length);
-  const sections = filled.map(([g, color, list], i) => {
-    const custom = i === filled.length - 1 ? `<button class="tile other" data-a="custom">+ 직접 입력</button><button class="tile other" data-a="clear"${state.cart.length?'':' disabled'}>선택 해제</button>` : '';
-    const rows = g === '차' ? WIDE_ROWS.map(r => ({cols:r.cols, items:r.names.map(n => list.find(p => p.name.startsWith(n)))})).filter(r => r.items.every(Boolean)) : [];
-    const rest = list.filter(p => !rows.some(r => r.items.includes(p)));
-    const wide = rows.map(r => `<div class="wide-row" style="grid-template-columns:${r.cols}">${r.items.map(p => tile(p, color)).join('')}</div>`).join('');
-    return `<h3>${g}</h3><div class="grid">${rest.map(p => tile(p, color)).join('')}${wide}${custom}</div>`;
-  }).join('');
+  // 상품 칸: 설정의 제품 목록 순서 그대로, 포수·용량이 있는 전체 이름, 묶음별 바탕색(쌍화차 2종은 연한 핑크).
+  // 선택하면 오른쪽 위에 파란 숫자 배지(수량)가 붙습니다. 테두리는 바뀌지 않습니다.
+  const colorOf = name => name.includes('쌍화차') ? '#fde2ec' : (GROUPS.find(([g]) => g === groupOf(name)) || GROUPS[3])[1];
+  const tile = p => `<button class="tile${qty[p.id]?' in':''}" style="background:${colorOf(p.name)}" data-a="add" data-v="${esc(p.id)}">
+      <span class="n">${esc(p.name)}</span><span class="p">${won(p.price)}원</span>
+      ${qty[p.id]?`<span class="badge" aria-label="선택됨 ${qty[p.id]}개">${qty[p.id]}</span>`:''}</button>`;
+  const sections = `<div class="grid">${state.products.map(tile).join('')}<button class="tile other" data-a="custom">+ 직접 입력</button><button class="tile other" data-a="clear"${state.cart.length?'':' disabled'}>선택 해제</button></div>`;
   const count = state.cart.filter(l => l.key !== DISCOUNT).reduce((a, l) => a + l.qty, 0);
   keepScroll('.groups', () => {
     v.innerHTML = `${storageAlert()}<div class="groups">${sections}</div>
