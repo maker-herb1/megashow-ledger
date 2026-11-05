@@ -100,6 +100,7 @@ main.sale{overflow:hidden;display:flex;flex-direction:column}
 .hint{color:var(--mute);font-size:14px;margin:4px 0 8px}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .btn{padding:11px 14px;border:1px solid #d1d5db;background:#fff;border-radius:8px;font-weight:600}
+.btn.save,select.save{border-color:transparent;background:#d9f2e3;color:var(--ink)}
 .btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
 .btn.danger{color:var(--red);border-color:var(--red)}
 .btn.on{background:var(--blue);border-color:var(--blue);color:#fff}
@@ -154,7 +155,7 @@ dialog label input{display:block;width:100%;margin-top:4px;font-size:18px;color:
 <script>
 (() => {
 'use strict';
-const APP_VERSION = '2026-11-06.18';
+const APP_VERSION = '2026-11-06.19';
 const KEY = 'megashow-ledger-v1';
 const PAYS = ['카드', '현금', '계좌이체'];
 const TABS = [['sale', '판매'], ['history', '내역'], ['close', '마감'], ['settings', '설정']];
@@ -355,7 +356,7 @@ function renderClose() {
     <div class="row" style="margin-bottom:8px">${field('card','단말기 카드 합계')}${field('transfer','계좌 입금 합계')}${field('float','시작 거스름돈')}${field('cash','현금통 실제 금액')}</div>
     <table><thead><tr><th>결제수단</th><th class="r">대장</th><th class="r">차이</th></tr></thead><tbody id="reconResult"></tbody></table></div>`;
   v.innerHTML = `<div class="page">${storageAlert()}
-    <div class="row" style="margin-bottom:10px"><select data-c="closeDate">${dateOptions(d,true)}</select></div>
+    <div class="row" style="margin-bottom:10px"><select class="save" data-c="closeDate">${dateOptions(d,true)}</select></div>
     <div class="box"><h2>매출 합계 ${won(sumOf(list))}원 · ${list.length}건</h2>
       <table><tbody>${PAYS.map(p=>`<tr><td>${p}</td><td class="r">${won(pay[p])}원</td></tr>`).join('')}</tbody></table></div>
     ${recon}
@@ -369,8 +370,8 @@ function renderClose() {
         ? '판매 기록은 자동으로 관리자 구글 시트에 들어갑니다. 하루가 끝나면 위 상태가 "모두 전송됨"인지 확인하세요. 백업 파일 저장은 만일을 위한 것입니다. (백업 이후 바뀐 기록: ' + pending + '건)'
         : '판매 기록은 자동으로 구글 시트에 들어갑니다. 백업 파일은 만일을 위한 사본이고, 엑셀용 파일과 인쇄는 이 기기의 기록으로 만듭니다. (백업 이후 바뀐 기록: ' + pending + '건)'}</p>
       <div class="row">${isPhone()
-        ? '<button class="btn" data-a="backup">백업 파일 저장</button>'
-        : '<button class="btn" data-a="backup">백업 파일 저장</button><button class="btn" data-a="csv">엑셀용 파일 저장</button><button class="btn" data-a="print">대장 인쇄</button>'}</div></div></div>`;
+        ? '<button class="btn save" data-a="backup">백업 파일 저장</button>'
+        : '<button class="btn save" data-a="backup">백업 파일 저장</button><button class="btn" data-a="csv">엑셀용 파일 저장</button><button class="btn" data-a="print">대장 인쇄</button>'}</div></div></div>`;
   renderReconResult(d);
 }
 function renderSettings() {
@@ -379,14 +380,14 @@ function renderSettings() {
   v.innerHTML = `<div class="page">${storageAlert()}
     <div class="box"><h2>제품 목록</h2><p class="hint">한 줄에 하나씩 <b>제품명, 판매가</b>로 적습니다. 엑셀에서 두 칸을 복사해 붙여넣어도 됩니다. 위쪽 줄이 판매 화면에서 먼저 나옵니다.</p>
       <textarea id="prodText" spellcheck="false">${esc(txt)}</textarea><p class="err" id="prodErr"></p>
-      <button class="btn primary" data-a="saveProducts">제품 목록 저장</button></div>
+      <button class="btn save" data-a="saveProducts">제품 목록 저장</button></div>
     <div class="box"><h2>행사와 판매대</h2>
       <p class="hint">기기를 여러 대 쓰면 판매대 이름을 다르게 적으세요.</p>
-      <div class="row"><input id="evName" placeholder="행사명" value="${esc(state.eventName)}"><input id="devName" placeholder="판매대 이름 (예: 1번 판매대)" value="${esc(state.device)}"><button class="btn" data-a="saveInfo">저장</button></div></div>
+      <div class="row"><input id="evName" placeholder="행사명" value="${esc(state.eventName)}"><input id="devName" placeholder="판매대 이름 (예: 1번 판매대)" value="${esc(state.device)}"><button class="btn save" data-a="saveInfo">저장</button></div></div>
     <div class="box"><h2>자동 전송 (구글 시트)</h2>
       <p class="hint">판매 완료마다 기록을 관리자 구글 시트로 보냅니다. 통신이 끊기면 모아 두었다가 다시 보냅니다. 주소와 비밀번호는 관리자가 알려 줍니다.</p>
       <div class="row"><input id="syncUrl" placeholder="전송 주소 (https://script.google.com/…)" value="${esc(state.syncUrl)}" autocomplete="off" style="flex:1 1 100%"></div>
-      <div class="row"><input id="syncKey" placeholder="비밀번호" value="${esc(state.syncKey)}" autocomplete="off"><button class="btn" data-a="saveSync">저장</button><button class="btn" data-a="testSync">연결 확인</button><button class="btn" data-a="syncNow">지금 전송</button></div>
+      <div class="row"><input id="syncKey" placeholder="비밀번호" value="${esc(state.syncKey)}" autocomplete="off"><button class="btn save" data-a="saveSync">저장</button><button class="btn" data-a="testSync">연결 확인</button><button class="btn" data-a="syncNow">지금 전송</button></div>
       <p class="hint syncStatus">${syncStatusText()}</p></div>
     <div class="box"><h2>백업 불러오기 (만일을 위한 기능)</h2>
       <p class="hint">평소에는 쓸 일이 없습니다. 구글 시트 전송이 안 될 때 직원 휴대폰의 백업 파일을 받아 이 기기로 모으거나, 기기를 바꿨을 때 기록을 되살릴 때 씁니다. 불러오면 기존 기록을 지우지 않고 합칩니다.</p>
