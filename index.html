@@ -71,6 +71,8 @@ main.sale{overflow:hidden;display:flex;flex-direction:column}
 .kv{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;font-variant-numeric:tabular-nums}
 .kv .lb{color:#4b5563}
 .dcin{width:50%;text-align:right;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums}
+.gift{margin-left:6px;padding:4px 9px;height:30px;border:1px solid #d1d5db;border-radius:6px;background:#fff;font-size:13px;font-weight:600;color:#4b5563}
+.gift.on{background:var(--red);border-color:var(--red);color:#fff}
 .minus,.minus td{color:var(--red);font-weight:600}
 .sale-item.x .minus{color:inherit;font-weight:inherit}
 .co .err{min-height:0;text-align:right}
@@ -188,6 +190,11 @@ let checkout = false, tab = 'sale', histDate = null, closeDate = null, undoInfo 
 
 /* ---------- 공통 ---------- */
 function cartTotal() { return state.cart.reduce((a, l) => a + l.qty * l.price, 0); }
+function isGift() {
+  const sub = state.cart.filter(l => l.key !== DISCOUNT).reduce((a, l) => a + l.qty * l.price, 0);
+  const dcLine = state.cart.find(l => l.key === DISCOUNT);
+  return !!dcLine && sub > 0 && -dcLine.price === sub && state.memo.trim() === '증정';
+}
 function canPay() { return state.cart.some(l => l.key !== DISCOUNT) && cartTotal() >= 0; }
 function matches(s, d) { return d === 'all' || s.date === d; }
 function salesOf(d) { return state.sales.filter(s => matches(s, d)).sort((a, b) => a.ts - b.ts); }
@@ -290,7 +297,7 @@ function renderCheckout() {
       <div class="box">${rows}</div>
       <div class="box">
         <div class="kv"><span class="lb">상품 합계</span><span>${won(sub)}원</span></div>
-        <div class="kv"><span class="lb">할인(금액조정)</span><input class="dcin" id="dcInput" inputmode="numeric" autocomplete="off" aria-label="할인 금액" value="${dc?won(dc):''}"></div>
+        <div class="kv"><span class="lb">할인(금액조정)<button class="gift${isGift()?' on':''}" data-a="gift" type="button">증정</button></span><input class="dcin" id="dcInput" inputmode="numeric" autocomplete="off" aria-label="할인 금액" value="${dc?won(dc):''}"></div>
         <p class="err" id="dcErr">${total<0?'할인이 상품 합계보다 큽니다.':''}</p>
         <div class="kv final"><span>받을 금액</span><b id="finalAmt">${won(total)}원</b></div>
       </div>
@@ -528,6 +535,11 @@ const actions = {
   dec(i) { const l = state.cart[i]; if (--l.qty < 1) state.cart.splice(i, 1); dropOrphanDiscount(); save(); render(); },
   rm(i) { state.cart.splice(i, 1); dropOrphanDiscount(); save(); render(); },
   clear() { state.cart = []; state.memo = ''; save(); closeCheckout(); render(); },
+  gift() {
+    if (isGift()) { setDiscount(0); state.memo = ''; }
+    else { setDiscount(state.cart.filter(l => l.key !== DISCOUNT).reduce((a, l) => a + l.qty * l.price, 0)); state.memo = '증정'; }
+    save(); render();
+  },
   openCheckout() { hideToast(); checkout = true; history.pushState({checkout:true}, ''); render(); document.querySelector('.co').scrollTop = 0; },
   closeCheckout() { closeCheckout(); render(); },
   setMethod(m) { state.method = m; save(); render(); },
