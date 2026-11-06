@@ -157,7 +157,7 @@ dialog label input{display:block;width:100%;margin-top:4px;font-size:18px;color:
 <script>
 (() => {
 'use strict';
-const APP_VERSION = '2026-11-06.25';
+const APP_VERSION = '2026-11-06.26';
 const KEY = 'megashow-ledger-v1';
 const PAYS = ['카드', '현금', '계좌이체'];
 const TABS = [['sale', '판매'], ['history', '내역'], ['close', '마감'], ['settings', '설정']];
@@ -240,6 +240,10 @@ function renderChrome() {
   $('tabs').innerHTML = TABS.map(([k, v]) => `<button data-a="tab" data-v="${k}" class="${k===tab?'on':''}">${v}</button>`).join('');
 }
 function render() {
+  // 담은 상품이 하나도 없으면 결제 상태를 처음으로 되돌립니다(증정·결제수단·메모·할인).
+  if (!state.cart.some(l => l.key !== DISCOUNT) && (state.cart.length || state.method !== '카드' || state.memo)) {
+    state.cart = []; state.method = '카드'; state.memo = ''; save();
+  }
   renderChrome();
   ({sale:renderSale, history:renderHistory, close:renderClose, settings:renderSettings})[tab]();
 }
