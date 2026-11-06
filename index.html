@@ -157,7 +157,7 @@ dialog label input{display:block;width:100%;margin-top:4px;font-size:18px;color:
 <script>
 (() => {
 'use strict';
-const APP_VERSION = '2026-11-06.24';
+const APP_VERSION = '2026-11-06.25';
 const KEY = 'megashow-ledger-v1';
 const PAYS = ['카드', '현금', '계좌이체'];
 const TABS = [['sale', '판매'], ['history', '내역'], ['close', '마감'], ['settings', '설정']];
@@ -190,6 +190,8 @@ function load() {
   if (!raw) { state = fresh(); return; }
   try { state = Object.assign(fresh(), JSON.parse(raw)); }
   catch (e) { localStorage.setItem(KEY + '-corrupt-' + Date.now(), raw); state = fresh(); }
+  // 2026-11-06.23 이전 버전이 증정 때 자동으로 적어 두고 남긴 메모 "증정"을 한 번 지웁니다.
+  if (state.memo === '증정') { state.memo = ''; if (state.method !== '증정') save(); }
 }
 function save() {
   try { localStorage.setItem(KEY, JSON.stringify(state)); storageFailed = false; }
