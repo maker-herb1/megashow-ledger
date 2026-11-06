@@ -57,6 +57,8 @@ main.sale{overflow:hidden;display:flex;flex-direction:column}
 .co{flex:1;min-height:0;overflow:auto;padding:10px;width:100%;max-width:640px;margin:0 auto}
 .line{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto auto auto;align-items:center;column-gap:7px;padding:8px 0;border-bottom:1px solid var(--line)}
 .line:last-child{border-bottom:0}
+.giftline{margin:10px 2px 0;padding:8px 10px;background:#f8ecc4;border-radius:8px;font-size:15px}
+.line .info em.gq{font-style:normal;font-weight:600;color:var(--ink);background:#f8ecc4;border-radius:5px;padding:0 5px}
 .line .info{min-width:0;background:none;border:0;text-align:left;padding:0}
 .line .info b{display:block;font-weight:600;font-size:19px;line-height:1.15;letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .line .info span{display:block;margin-top:3px;color:var(--mute);font-size:14px;line-height:1.15;white-space:nowrap;font-variant-numeric:tabular-nums}
@@ -157,7 +159,7 @@ dialog label input{display:block;width:100%;margin-top:4px;font-size:18px;color:
 <script>
 (() => {
 'use strict';
-const APP_VERSION = '2026-11-06.27';
+const APP_VERSION = '2026-11-06.28';
 const KEY = 'megashow-ledger-v1';
 const PAYS = ['카드', '현금', '계좌이체'];
 const TABS = [['sale', '판매'], ['history', '내역'], ['close', '마감'], ['settings', '설정']];
@@ -201,10 +203,13 @@ function save() {
 let checkout = false, tab = 'sale', histDate = null, closeDate = null, undoInfo = null, toastTimer = null;
 
 /* ---------- 공통 ---------- */
-function cartTotal() { return state.cart.reduce((a, l) => a + l.qty * l.price, 0); }
+// 줄별 증정 수량: 그 줄 수량 중 몇 개를 무료로 주는지(기본 0). 금액은 증정 수량을 뺀 만큼만 받습니다.
+function giftQty(l) { return Math.max(0, Math.min(l.gift || 0, l.qty)); }
+function lineAmt(l) { return (l.qty - giftQty(l)) * l.price; }
+function cartTotal() { return state.cart.reduce((a, l) => a + lineAmt(l), 0); }
 // 증정은 결제수단 "증정"으로만 판단합니다. 메모는 건드리지 않습니다.
 function isGift() { return state.method === '증정'; }
-function itemsSum() { return state.cart.filter(l => l.key !== DISCOUNT).reduce((a, l) => a + l.qty * l.price, 0); }
+function itemsSum() { return state.cart.filter(l => l.key !== DISCOUNT).reduce((a, l) => a + lineAmt(l), 0); }
 // 증정이면 수량·단가가 바뀌어도 할인을 상품 합계와 같게 맞춰 0원을 유지합니다.
 function fixMethod() { if (isGift()) setDiscount(itemsSum()); }
 function canPay() { return state.cart.some(l => l.key !== DISCOUNT) && cartTotal() >= 0; }
@@ -216,17 +221,33 @@ function byPay(list) { const o = {}; PAYS.forEach(p => o[p] = 0); list.forEach(s
 function sumOf(list) { return list.reduce((a, s) => a + s.total, 0); }
 function byProduct(list) {
   const m = new Map();
-  list.forEach(s => s.items.forEach(i => {
+  list.filter(s => s.pay !== '증정').forEach(s => s.items.forEach(i => {
+    const paid = i.qty - giftQty(i);
+    if (i.key !== DISCOUNT && paid <= 0) return;
     const r = m.get(i.name) || {name:i.name, qty:0, amount:0, discount:i.key === DISCOUNT};
-    r.qty += i.qty; r.amount += i.qty * i.price; m.set(i.name, r);
+    r.qty += i.key === DISCOUNT ? i.qty : paid; r.amount += lineAmt(i); m.set(i.name, r);
   }));
   return [...m.values()].sort((a, b) => (a.discount - b.discount) || (b.amount - a.amount));
+}
+// 증정 수량: 줄별 증정 + 전체 증정 거래의 상품
+function giftsOf(list) {
+  const m = new Map();
+  list.forEach(s => s.items.forEach(i => {
+    if (i.key === DISCOUNT) return;
+    const g = s.pay === '증정' ? i.qty : giftQty(i);
+    if (g > 0) m.set(i.name, (m.get(i.name) || 0) + g);
+  }));
+  return [...m.entries()];
+}
+function giftLine(list) {
+  const g = giftsOf(list);
+  return g.length ? '증정: ' + g.map(([n, q]) => `${esc(n)} ${q}`).join(', ') : '';
 }
 function dateOptions(sel, withAll) {
   return allDates().map(d => `<option value="${d}"${d===sel?' selected':''}>${d}${d===today()?' (오늘)':''}</option>`).join('')
     + (withAll ? `<option value="all"${sel==='all'?' selected':''}>전체 기간</option>` : '');
 }
-function itemsHtml(s) { return s.items.map(i => i.key === DISCOUNT ? `<span class="minus">할인 ${won(i.price)}</span>` : `${esc(i.name)} ×${i.qty}`).join(', '); }
+function itemsHtml(s) { return s.items.map(i => i.key === DISCOUNT ? `<span class="minus">할인 ${won(i.price)}</span>` : `${esc(i.name)} ×${i.qty}${giftQty(i)?` (증정 ${giftQty(i)})`:''}`).join(', '); }
 
 /* ---------- 렌더 ---------- */
 function renderChrome() {
@@ -295,13 +316,13 @@ function renderCheckout() {
   fixMethod();
   const v = $('view'); v.className = 'sale';
   const items = state.cart.filter(l => l.key !== DISCOUNT);
-  const sub = items.reduce((a, l) => a + l.qty * l.price, 0);
+  const sub = items.reduce((a, l) => a + lineAmt(l), 0);
   const dcLine = state.cart.find(l => l.key === DISCOUNT);
   const dc = dcLine ? -dcLine.price : 0, total = cartTotal();
   const rows = state.cart.map((l, i) => l.key === DISCOUNT ? '' : `<div class="line">
-      <button class="info" data-a="editLine" data-v="${i}"><b>${esc(shortName(l.name))}</b><span>${won(l.price)}원 × ${l.qty}</span></button>
+      <button class="info" data-a="editLine" data-v="${i}"><b>${esc(shortName(l.name))}</b><span>${won(l.price)}원 × ${l.qty}${giftQty(l)?` · <em class="gq">증정 ${giftQty(l)}</em>`:''}</span></button>
       <button class="qb" data-a="dec" data-v="${i}" aria-label="수량 줄이기">−</button><span class="q">${l.qty}</span><button class="qb" data-a="inc" data-v="${i}" aria-label="수량 늘리기">+</button>
-      <span class="amt">${won(l.qty*l.price)}</span>
+      <span class="amt">${won(lineAmt(l))}</span>
       <button class="trash" data-a="rm" data-v="${i}" aria-label="${esc(shortName(l.name))} 삭제">🗑️</button></div>`).join('');
   keepScroll('.co', () => {
     v.innerHTML = `${storageAlert()}<div class="co">
@@ -370,7 +391,8 @@ function renderClose() {
     <div class="box"><h2>제품별 판매</h2>
       <table><thead><tr><th>품목</th><th class="r">수량</th><th class="r">금액</th></tr></thead>
       <tbody>${rows.map(x=>`<tr><td>${esc(x.name)}</td><td class="r">${x.discount?'':won(x.qty)}</td><td class="r">${won(x.amount)}</td></tr>`).join('') || '<tr><td colspan="3" class="hint">기록이 없습니다.</td></tr>'}</tbody>
-      <tfoot><tr><td>합계</td><td></td><td class="r">${won(sumOf(list))}</td></tr></tfoot></table></div>
+      <tfoot><tr><td>합계</td><td></td><td class="r">${won(sumOf(list))}</td></tr></tfoot></table>
+      ${giftLine(list)?`<p class="giftline">${giftLine(list)}</p>`:''}</div>
     <div class="box"><h2>전송과 백업</h2>
       <p class="hint syncStatus">${syncStatusText()}</p>
       <p class="hint">${isPhone()
@@ -434,7 +456,7 @@ function saleDetail(id) {
   const dlg = $('dlg');
   dlg.innerHTML = `<h2>${esc(s.date)} ${timeOf(s.ts)} · ${won(s.total)}원${s.canceled?' (취소됨)':''}</h2>
     <table><thead><tr><th>품목</th><th class="r">수량</th><th class="r">단가</th><th class="r">금액</th></tr></thead><tbody>
-    ${s.items.map(i=>`<tr${i.key===DISCOUNT?' class="minus"':''}><td>${esc(i.name)}</td><td class="r">${i.qty}</td><td class="r">${won(i.price)}</td><td class="r">${won(i.qty*i.price)}</td></tr>`).join('')}</tbody></table>
+    ${s.items.map(i=>`<tr${i.key===DISCOUNT?' class="minus"':''}><td>${esc(i.name)}${giftQty(i)?` (증정 ${giftQty(i)})`:''}</td><td class="r">${i.qty}</td><td class="r">${won(i.price)}</td><td class="r">${won(lineAmt(i))}</td></tr>`).join('')}</tbody></table>
     ${s.memo?`<p class="hint" style="margin-top:12px">메모: ${esc(s.memo)}</p>`:''}
     <p class="hint" style="margin-top:12px">결제수단</p><div class="row">${PAYS.map(p=>`<button class="btn${p===s.pay?' on':''}" data-p="${p}">${p}</button>`).join('')}</div>
     <p class="hint" style="margin-top:12px">판매 날짜</p><input type="date" id="saleDate" value="${esc(s.date)}">
@@ -473,7 +495,11 @@ function buildCsv(d) {
   const seq = {};
   salesOf(d).forEach(s => {
     seq[s.date] = (seq[s.date] || 0) + 1;
-    s.items.forEach(i => out.push([state.eventName, s.date, timeOf(s.ts), seq[s.date], i.name, i.qty, i.price, i.qty*i.price, s.pay, s.device||'', s.canceled?'취소':'정상', s.memo||'']));
+    s.items.forEach(i => {
+      const g = giftQty(i), row = (q, amt, pay) => out.push([state.eventName, s.date, timeOf(s.ts), seq[s.date], i.name, q, i.price, amt, pay, s.device||'', s.canceled?'취소':'정상', s.memo||'']);
+      if (i.qty - g > 0 || i.key === DISCOUNT) row(i.qty - g, lineAmt(i), s.pay);
+      if (g > 0) row(g, 0, '증정');
+    });
   });
   return '﻿' + out.map(r => r.map(csvCell).join(',')).join('\r\n');
 }
@@ -527,12 +553,13 @@ function buildPrint(d) {
   const list = salesOf(d), act = activeOf(d), pay = byPay(act), seq = {};
   const rows = list.flatMap(s => {
     seq[s.date] = (seq[s.date] || 0) + 1; const no = seq[s.date];
-    return s.items.map(i => `<tr class="${s.canceled?'x':''}"><td>${d==='all'?esc(s.date.slice(5))+' ':''}${timeOf(s.ts)}</td><td class="r">${no}</td><td>${esc(i.name)}</td><td class="r">${won(i.qty)}</td><td class="r">${won(i.price)}</td><td class="r">${won(i.qty*i.price)}</td><td>${esc(s.pay)}</td></tr>`);
+    return s.items.map(i => `<tr class="${s.canceled?'x':''}"><td>${d==='all'?esc(s.date.slice(5))+' ':''}${timeOf(s.ts)}</td><td class="r">${no}</td><td>${esc(i.name)}${giftQty(i)?` (증정 ${giftQty(i)})`:''}</td><td class="r">${won(i.qty)}</td><td class="r">${won(i.price)}</td><td class="r">${won(lineAmt(i))}</td><td>${esc(s.pay)}</td></tr>`);
   }).join('');
   $('print').innerHTML = `<h1>${esc(state.eventName)} 판매대장</h1>
     <div>${d==='all'?'전체 기간':d}${state.device?' · '+esc(state.device):''} · ${act.length}건 · 합계 ${won(sumOf(act))}원 (${PAYS.map(p=>`${p} ${won(pay[p])}`).join(', ')})</div>
     <h2>제품별 판매</h2><table><thead><tr><th>품목</th><th class="r">수량</th><th class="r">금액</th></tr></thead><tbody>
     ${byProduct(act).map(x=>`<tr><td>${esc(x.name)}</td><td class="r">${x.discount?'':won(x.qty)}</td><td class="r">${won(x.amount)}</td></tr>`).join('')}</tbody></table>
+    ${giftLine(act)?`<p>${giftLine(act)}</p>`:''}
     <h2>거래 내역</h2><table><thead><tr><th>시간</th><th class="r">번호</th><th>품목</th><th class="r">수량</th><th class="r">단가</th><th class="r">금액</th><th>결제</th></tr></thead><tbody>${rows}</tbody>
     <tfoot><tr><td colspan="5">합계 (취소선 거래 제외)</td><td class="r">${won(sumOf(act))}</td><td></td></tr></tfoot></table>`;
 }
@@ -587,7 +614,7 @@ const actions = {
     save(); render();
   },
   inc(i) { state.cart[i].qty++; save(); render(); },
-  dec(i) { const l = state.cart[i]; if (--l.qty < 1) state.cart.splice(i, 1); dropOrphanDiscount(); save(); render(); },
+  dec(i) { const l = state.cart[i]; if (--l.qty < 1) state.cart.splice(i, 1); else if (l.gift > l.qty) l.gift = l.qty; dropOrphanDiscount(); save(); render(); },
   rm(i) { state.cart.splice(i, 1); dropOrphanDiscount(); save(); render(); },
   clear() { state.cart = []; state.memo = ''; save(); closeCheckout(); render(); },
   gift() {
@@ -608,11 +635,11 @@ const actions = {
   },
   async editLine(i) {
     const l = state.cart[i];
-    const v = await form({title:shortName(l.name), extra:'삭제', fields:[{name:'qty',label:'수량',value:l.qty,numeric:true},{name:'price',label:'단가',value:l.price,numeric:true}],
-      validate: x => !(money(x.qty) >= 1) ? '수량은 1 이상이어야 합니다.' : (Number.isNaN(money(x.price)) ? '단가를 숫자로 입력하세요.' : null)});
+    const v = await form({title:shortName(l.name), extra:'삭제', fields:[{name:'qty',label:'수량',value:l.qty,numeric:true},{name:'price',label:'단가',value:l.price,numeric:true},{name:'gift',label:'증정 수량 (무료로 주는 개수)',value:l.gift||0,numeric:true}],
+      validate: x => !(money(x.qty) >= 1) ? '수량은 1 이상이어야 합니다.' : (Number.isNaN(money(x.price)) ? '단가를 숫자로 입력하세요.' : (!((money(x.gift) || 0) >= 0 && (money(x.gift) || 0) <= money(x.qty)) ? '증정 수량은 0부터 수량까지입니다.' : null))});
     if (!v) return;
     if (v === 'extra') state.cart.splice(i, 1);
-    else { l.qty = money(v.qty); l.price = money(v.price); }
+    else { l.qty = money(v.qty); l.price = money(v.price); l.gift = money(v.gift) || 0; if (!l.gift) delete l.gift; }
     dropOrphanDiscount(); save(); render();
   },
   pay() {
