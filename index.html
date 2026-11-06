@@ -155,7 +155,7 @@ dialog label input{display:block;width:100%;margin-top:4px;font-size:18px;color:
 <script>
 (() => {
 'use strict';
-const APP_VERSION = '2026-11-06.22';
+const APP_VERSION = '2026-11-06.23';
 const KEY = 'megashow-ledger-v1';
 const PAYS = ['카드', '현금', '계좌이체'];
 const TABS = [['sale', '판매'], ['history', '내역'], ['close', '마감'], ['settings', '설정']];
@@ -198,12 +198,11 @@ let checkout = false, tab = 'sale', histDate = null, closeDate = null, undoInfo 
 
 /* ---------- 공통 ---------- */
 function cartTotal() { return state.cart.reduce((a, l) => a + l.qty * l.price, 0); }
-function isGift() {
-  const sub = state.cart.filter(l => l.key !== DISCOUNT).reduce((a, l) => a + l.qty * l.price, 0);
-  const dcLine = state.cart.find(l => l.key === DISCOUNT);
-  return !!dcLine && sub > 0 && -dcLine.price === sub && state.memo.trim() === '증정';
-}
-function fixMethod() { if (state.method === '증정' && !isGift()) state.method = '카드'; }
+// 증정은 결제수단 "증정"으로만 판단합니다. 메모는 건드리지 않습니다.
+function isGift() { return state.method === '증정'; }
+function itemsSum() { return state.cart.filter(l => l.key !== DISCOUNT).reduce((a, l) => a + l.qty * l.price, 0); }
+// 증정이면 수량·단가가 바뀌어도 할인을 상품 합계와 같게 맞춰 0원을 유지합니다.
+function fixMethod() { if (isGift()) setDiscount(itemsSum()); }
 function canPay() { return state.cart.some(l => l.key !== DISCOUNT) && cartTotal() >= 0; }
 function matches(s, d) { return d === 'all' || s.date === d; }
 function salesOf(d) { return state.sales.filter(s => matches(s, d)).sort((a, b) => a.ts - b.ts); }
@@ -301,7 +300,7 @@ function renderCheckout() {
       <div class="box">${rows}</div>
       <div class="box">
         <div class="kv"><span class="lb">상품 합계</span><span>${won(sub)}원</span></div>
-        <div class="kv"><span class="lb">할인(금액조정)<button class="gift${isGift()?' on':''}" data-a="gift" type="button">증정</button></span><input class="dcin" id="dcInput" inputmode="numeric" autocomplete="off" aria-label="할인 금액" value="${dc?won(dc):''}"></div>
+        <div class="kv"><span class="lb">할인(금액조정)<button class="gift${isGift()?' on':''}" data-a="gift" type="button">증정</button></span><input class="dcin" id="dcInput" inputmode="numeric" autocomplete="off" aria-label="할인 금액" value="${dc?won(dc):''}"${isGift()?' readonly':''}></div>
         <p class="err" id="dcErr">${total<0?'할인이 상품 합계보다 큽니다.':''}</p>
         <div class="kv final"><span>받을 금액</span><b id="finalAmt">${won(total)}원</b></div>
       </div>
@@ -582,8 +581,8 @@ const actions = {
   rm(i) { state.cart.splice(i, 1); dropOrphanDiscount(); save(); render(); },
   clear() { state.cart = []; state.memo = ''; save(); closeCheckout(); render(); },
   gift() {
-    if (isGift()) { setDiscount(0); state.memo = ''; state.method = '카드'; }
-    else { setDiscount(state.cart.filter(l => l.key !== DISCOUNT).reduce((a, l) => a + l.qty * l.price, 0)); state.memo = '증정'; state.method = '증정'; }
+    if (isGift()) { state.method = '카드'; setDiscount(0); }
+    else { state.method = '증정'; setDiscount(itemsSum()); }
     save(); render();
   },
   openCheckout() { hideToast(); checkout = true; history.pushState({checkout:true}, ''); render(); document.querySelector('.co').scrollTop = 0; },
