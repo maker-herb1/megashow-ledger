@@ -26,9 +26,9 @@ header{background:var(--card);color:var(--ink);padding:8px 12px;display:flex;jus
 #today{color:#374151}
 header strong{font-size:19px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #today{font-size:15px;white-space:nowrap;font-variant-numeric:tabular-nums}
-nav{display:flex;gap:4px;padding:8px 10px 2px;background:var(--bg);border-top:1px solid #c8cdd5}
-nav button{flex:1;padding:8px 0;border:1px solid #d1d5db;background:#fff;border-radius:9px;font-weight:600;font-size:16px;color:#374151}
-nav button.on{background:#dbeafe;border-color:var(--blue);color:var(--blue)}
+nav{display:flex;gap:3px;margin:8px 10px 2px;padding:3px;background:#dfe3e8;border-radius:11px}
+nav button{flex:1;padding:8px 0;border:0;background:transparent;border-radius:8px;font-weight:600;font-size:16px;color:#4b5563}
+nav button.on{background:#dbeafe;color:var(--blue);box-shadow:inset 0 0 0 2px var(--blue)}
 main{flex:1;min-height:0;overflow:auto}
 main.sale{overflow:hidden;display:flex;flex-direction:column}
 .alert{background:var(--red);color:#fff;padding:8px 12px;font-size:14px}
@@ -155,7 +155,7 @@ dialog label input{display:block;width:100%;margin-top:4px;font-size:18px;color:
 <script>
 (() => {
 'use strict';
-const APP_VERSION = '2026-11-06.21';
+const APP_VERSION = '2026-11-06.22';
 const KEY = 'megashow-ledger-v1';
 const PAYS = ['카드', '현금', '계좌이체'];
 const TABS = [['sale', '판매'], ['history', '내역'], ['close', '마감'], ['settings', '설정']];
