@@ -57,12 +57,8 @@ main.sale{overflow:hidden;display:flex;flex-direction:column}
 .co{flex:1;min-height:0;overflow:auto;padding:10px;width:100%;max-width:640px;margin:0 auto}
 .line{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto auto auto;align-items:center;column-gap:7px;padding:8px 0;border-bottom:1px solid var(--line)}
 .line:last-child{border-bottom:0}
-.giftbox{margin:12px 0 0;padding:8px 10px 4px;background:#f8ecc4;border-radius:8px}
-.giftbox h3{margin:0 0 2px;font-size:15px}
-.giftbox td{border-bottom-color:#eadb9f}
-.giftbox tr:last-child td{border-bottom:0}
+.gifthd{margin:16px 0 0;padding:7px 5px;background:#f8ecc4;border-radius:6px;font-size:15px;font-weight:700}
 .prod td:nth-child(3),.prod th:nth-child(3){width:96px}
-.giftbox .amt-sp{width:86px}
 .line .info em.gq{font-style:normal;font-weight:600;color:var(--ink);background:#f8ecc4;border-radius:5px;padding:0 5px}
 .line .info{min-width:0;background:none;border:0;text-align:left;padding:0}
 .line .info b{display:block;font-weight:600;font-size:19px;line-height:1.15;letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -170,7 +166,7 @@ dialog label input{display:block;width:100%;margin-top:4px;font-size:18px;color:
 <script>
 (() => {
 'use strict';
-const APP_VERSION = '2026-11-06.30';
+const APP_VERSION = '2026-11-06.31';
 const KEY = 'megashow-ledger-v1';
 const PAYS = ['카드', '현금', '계좌이체'];
 const TABS = [['sale', '판매'], ['history', '내역'], ['close', '마감'], ['settings', '설정']];
@@ -404,7 +400,7 @@ function renderClose() {
       <table class="prod"><thead><tr><th>품목</th><th class="r">수량</th><th class="r">금액</th></tr></thead>
       <tbody>${rows.map(x=>`<tr><td>${esc(x.name)}</td><td class="r">${x.discount?'':won(x.qty)}</td><td class="r">${won(x.amount)}</td></tr>`).join('') || '<tr><td colspan="3" class="hint">기록이 없습니다.</td></tr>'}</tbody>
       <tfoot><tr><td>합계</td><td></td><td class="r">${won(sumOf(list))}</td></tr></tfoot></table>
-      ${giftTable(list)?`<div class="giftbox"><h3>증정</h3>${giftTable(list)}</div>`:''}</div>
+      ${giftTable(list)?`<div class="gifthd">증정</div>${giftTable(list).replace('class="gifttbl"','class="prod gifttbl"')}`:''}</div>
     <div class="box"><h2>전송과 백업</h2>
       <p class="hint syncStatus">${syncStatusText()}</p>
       <p class="hint">${isPhone()
