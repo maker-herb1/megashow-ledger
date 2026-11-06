@@ -57,7 +57,12 @@ main.sale{overflow:hidden;display:flex;flex-direction:column}
 .co{flex:1;min-height:0;overflow:auto;padding:10px;width:100%;max-width:640px;margin:0 auto}
 .line{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto auto auto;align-items:center;column-gap:7px;padding:8px 0;border-bottom:1px solid var(--line)}
 .line:last-child{border-bottom:0}
-.giftline{margin:10px 2px 0;padding:8px 10px;background:#f8ecc4;border-radius:8px;font-size:15px}
+.giftbox{margin:12px 0 0;padding:8px 10px 4px;background:#f8ecc4;border-radius:8px}
+.giftbox h3{margin:0 0 2px;font-size:15px}
+.giftbox td{border-bottom-color:#eadb9f}
+.giftbox tr:last-child td{border-bottom:0}
+.prod td:nth-child(3),.prod th:nth-child(3){width:96px}
+.giftbox .amt-sp{width:86px}
 .line .info em.gq{font-style:normal;font-weight:600;color:var(--ink);background:#f8ecc4;border-radius:5px;padding:0 5px}
 .line .info{min-width:0;background:none;border:0;text-align:left;padding:0}
 .line .info b{display:block;font-weight:600;font-size:19px;line-height:1.15;letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -165,7 +170,7 @@ dialog label input{display:block;width:100%;margin-top:4px;font-size:18px;color:
 <script>
 (() => {
 'use strict';
-const APP_VERSION = '2026-11-06.29';
+const APP_VERSION = '2026-11-06.30';
 const KEY = 'megashow-ledger-v1';
 const PAYS = ['카드', '현금', '계좌이체'];
 const TABS = [['sale', '판매'], ['history', '내역'], ['close', '마감'], ['settings', '설정']];
@@ -245,9 +250,10 @@ function giftsOf(list) {
   }));
   return [...m.entries()];
 }
-function giftLine(list) {
+// 증정 표: 한 줄에 한 상품(품목·수량). 금액은 없으므로 비워 둡니다.
+function giftTable(list) {
   const g = giftsOf(list);
-  return g.length ? '증정: ' + g.map(([n, q]) => `${esc(n)} ${q}`).join(', ') : '';
+  return g.length ? `<table class="gifttbl"><tbody>${g.map(([n, q]) => `<tr><td>${esc(n)}</td><td class="r">${won(q)}</td><td class="amt-sp"></td></tr>`).join('')}</tbody></table>` : '';
 }
 function dateOptions(sel, withAll) {
   return allDates().map(d => `<option value="${d}"${d===sel?' selected':''}>${d}${d===today()?' (오늘)':''}</option>`).join('')
@@ -395,10 +401,10 @@ function renderClose() {
       <table><tbody>${PAYS.map(p=>`<tr><td>${p}</td><td class="r">${won(pay[p])}원</td></tr>`).join('')}</tbody></table></div>
     ${recon}
     <div class="box"><h2>제품별 판매</h2>
-      <table><thead><tr><th>품목</th><th class="r">수량</th><th class="r">금액</th></tr></thead>
+      <table class="prod"><thead><tr><th>품목</th><th class="r">수량</th><th class="r">금액</th></tr></thead>
       <tbody>${rows.map(x=>`<tr><td>${esc(x.name)}</td><td class="r">${x.discount?'':won(x.qty)}</td><td class="r">${won(x.amount)}</td></tr>`).join('') || '<tr><td colspan="3" class="hint">기록이 없습니다.</td></tr>'}</tbody>
       <tfoot><tr><td>합계</td><td></td><td class="r">${won(sumOf(list))}</td></tr></tfoot></table>
-      ${giftLine(list)?`<p class="giftline">${giftLine(list)}</p>`:''}</div>
+      ${giftTable(list)?`<div class="giftbox"><h3>증정</h3>${giftTable(list)}</div>`:''}</div>
     <div class="box"><h2>전송과 백업</h2>
       <p class="hint syncStatus">${syncStatusText()}</p>
       <p class="hint">${isPhone()
@@ -593,7 +599,7 @@ function buildPrint(d) {
     <div>${d==='all'?'전체 기간':d}${state.device?' · '+esc(state.device):''} · ${act.length}건 · 합계 ${won(sumOf(act))}원 (${PAYS.map(p=>`${p} ${won(pay[p])}`).join(', ')})</div>
     <h2>제품별 판매</h2><table><thead><tr><th>품목</th><th class="r">수량</th><th class="r">금액</th></tr></thead><tbody>
     ${byProduct(act).map(x=>`<tr><td>${esc(x.name)}</td><td class="r">${x.discount?'':won(x.qty)}</td><td class="r">${won(x.amount)}</td></tr>`).join('')}</tbody></table>
-    ${giftLine(act)?`<p>${giftLine(act)}</p>`:''}
+    ${giftTable(act)?`<h2>증정</h2>${giftTable(act).replace('<tbody>','<thead><tr><th>품목</th><th class="r">수량</th><th></th></tr></thead><tbody>')}`:''}
     <h2>거래 내역</h2><table><thead><tr><th>시간</th><th class="r">번호</th><th>품목</th><th class="r">수량</th><th class="r">단가</th><th class="r">금액</th><th>결제</th></tr></thead><tbody>${rows}</tbody>
     <tfoot><tr><td colspan="5">합계 (취소선 거래 제외)</td><td class="r">${won(sumOf(act))}</td><td></td></tr></tfoot></table>`;
 }
