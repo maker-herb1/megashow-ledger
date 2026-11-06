@@ -155,7 +155,7 @@ dialog label input{display:block;width:100%;margin-top:4px;font-size:18px;color:
 <script>
 (() => {
 'use strict';
-const APP_VERSION = '2026-11-06.20';
+const APP_VERSION = '2026-11-06.21';
 const KEY = 'megashow-ledger-v1';
 const PAYS = ['카드', '현금', '계좌이체'];
 const TABS = [['sale', '판매'], ['history', '내역'], ['close', '마감'], ['settings', '설정']];
@@ -323,7 +323,7 @@ function renderHistory() {
   const rows = list.map(s => `<button class="sale-item${s.canceled?' x':''}" data-a="saleDetail" data-v="${esc(s.id)}">
     <div class="top"><span>${esc(s.date.slice(5))} ${timeOf(s.ts)} · ${esc(s.pay)} ${s.canceled?'<span class="tag">취소됨</span>':''}</span><span>${won(s.total)}원</span></div>
     <div class="sub">${itemsHtml(s)}${s.device?' · '+esc(s.device):''}${s.memo?' · 메모: '+esc(s.memo):''}</div></button>`).join('');
-  v.innerHTML = `<div class="page">${storageAlert()}<div class="row" style="margin-bottom:10px"><select data-c="histDate">${dateOptions(histDate,true)}</select>
+  v.innerHTML = `<div class="page">${storageAlert()}<div class="row" style="margin-bottom:10px"><select class="save" data-c="histDate">${dateOptions(histDate,true)}</select>
     <span>${activeOf(histDate).length}건 · ${won(sumOf(activeOf(histDate)))}원</span></div>
     ${rows || '<p class="hint">기록이 없습니다.</p>'}
     <p class="hint">기록을 누르면 결제수단과 날짜를 바꾸거나 거래를 취소할 수 있습니다.</p></div>`;
