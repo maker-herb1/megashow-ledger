@@ -157,7 +157,7 @@ dialog label input{display:block;width:100%;margin-top:4px;font-size:18px;color:
 <script>
 (() => {
 'use strict';
-const APP_VERSION = '2026-11-06.26';
+const APP_VERSION = '2026-11-06.27';
 const KEY = 'megashow-ledger-v1';
 const PAYS = ['카드', '현금', '계좌이체'];
 const TABS = [['sale', '판매'], ['history', '내역'], ['close', '마감'], ['settings', '설정']];
@@ -557,6 +557,8 @@ function importBackup(text) {
 }
 
 /* ---------- 동작 ---------- */
+// 결제 확인에서 상품 화면으로 돌아가면 증정은 풉니다(일반 할인·메모는 유지). 판매를 증정으로 잘못 기록하는 일을 막습니다.
+function leaveGift() { if (isGift()) { state.method = '카드'; setDiscount(0); save(); } }
 function closeCheckout() {
   if (!checkout) return;
   checkout = false;
@@ -594,7 +596,7 @@ const actions = {
     save(); render();
   },
   openCheckout() { hideToast(); checkout = true; history.pushState({checkout:true}, ''); render(); document.querySelector('.co').scrollTop = 0; },
-  closeCheckout() { closeCheckout(); render(); },
+  closeCheckout() { leaveGift(); closeCheckout(); render(); },
   setMethod(m) { state.method = m; save(); render(); },
   async custom() {
     const v = await form({title:'직접 입력', fields:[{name:'name',label:'품목 (비워두면 기타)'},{name:'price',label:'단가',numeric:true},{name:'qty',label:'수량',value:'1',numeric:true}],
@@ -708,7 +710,7 @@ $('importFile').addEventListener('change', async e => {
   const f = e.target.files[0]; e.target.value = '';
   if (f) importBackup(await f.text());
 });
-window.addEventListener('popstate', () => { if (checkout) { checkout = false; render(); } });
+window.addEventListener('popstate', () => { if (checkout) { leaveGift(); checkout = false; render(); } });
 window.addEventListener('storage', e => { if (e.key === KEY) { load(); render(); } });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) renderChrome(); });
 
