@@ -172,7 +172,7 @@ dialog label input{display:block;width:100%;margin-top:4px;font-size:18px;color:
 <script>
 (() => {
 'use strict';
-const APP_VERSION = '2026-11-08.32';
+const APP_VERSION = '2026-11-08.33';
 const KEY = 'megashow-ledger-v1';
 const PAYS = ['카드', '현금', '계좌이체'];
 const TABS = [['sale', '판매'], ['history', '내역'], ['close', '마감'], ['settings', '설정']];
@@ -188,12 +188,13 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 
 const money = s => { const t = String(s).replace(/[,\s원]/g, ''); return /^\d+$/.test(t) ? Number(t) : NaN; };
 
 // 202612_수원메가쇼 제품판매가.PNG 기준: 제품명, 메가쇼 판매가
+// 순서 = 판매 화면 순서(2026-11-08 사용자가 정함. 쌍화차 세트가 맨 앞, 정품과 실속형이 나란히). 설정의 제품 목록에서 줄을 옮기면 바뀝니다.
 const PRODUCTS = [
-  ['도라지농축(60포)',29000],['도라지환(30포)',26000],['라이블리Q(60포)',54000],['맨피던스110(60포)',54000],
-  ['상황버섯농축(60포)',65000],['속풀강황(60포)',20000],['실속있는강황환, 250g',20000],['실속있는도라지환, 280g',26000],
-  ['실속있는양배추환, 250g',20000],['실속있는여주환, 280g',26000],['양배추환(60포)',35000],['양배추농축(60포)',42000],
-  ['여주환(30포)',26000],['우슬즙(30포)',23000],['벌나무헛개즙(30포)',23000],['청안비결(60포)',36000],
-  ['전통쌍화차(20포)',29000],['전통쌍화차고명(20포)',7000],['청한차(20포)',25000]];
+  ['전통쌍화차(20포)',29000],['전통쌍화차고명(20포)',7000],['도라지농축(60포)',29000],['청한차(20포)',25000],
+  ['우슬즙(30포)',23000],['상황버섯농축(60포)',65000],['양배추농축(60포)',42000],['맨피던스110(60포)',54000],
+  ['여주환(30포)',26000],['실속있는여주환, 280g',26000],['벌나무헛개즙(30포)',23000],['라이블리Q(60포)',54000],
+  ['속풀강황(60포)',20000],['실속있는강황환, 250g',20000],['도라지환(30포)',26000],['실속있는도라지환, 280g',26000],
+  ['양배추환(60포)',35000],['실속있는양배추환, 250g',20000],['청안비결(60포)',36000]];
 function fresh() {
   return { eventName:'수원메가쇼', device:'', products:PRODUCTS.map(([name,price]) => ({id:uid(),name,price})),
     sales:[], cart:[], recon:{}, lastBackup:0, method:'카드', memo:'',
@@ -207,6 +208,12 @@ function load() {
   catch (e) { localStorage.setItem(KEY + '-corrupt-' + Date.now(), raw); state = fresh(); }
   // 2026-11-06.23 이전 버전이 증정 때 자동으로 적어 두고 남긴 메모 "증정"을 한 번 지웁니다.
   if (state.memo === '증정') { state.memo = ''; if (state.method !== '증정') save(); }
+  // 2026-11-08.33: 판매 화면 순서를 제품 목록 순서로 바꾸면서, 이미 쓰던 기기의 목록을 기본 순서로 한 번 다시 세웁니다(이름·가격은 그대로, 모르는 이름은 뒤에).
+  if ((state.orderV || 0) < 1) {
+    const idx = new Map(PRODUCTS.map(([n], i) => [n, i]));
+    state.products = [...state.products].map((p, i) => [p, idx.has(p.name) ? idx.get(p.name) : 1000 + i]).sort((a, b) => a[1] - b[1]).map(x => x[0]);
+    state.orderV = 1; save();
+  }
 }
 function save() {
   try { localStorage.setItem(KEY, JSON.stringify(state)); storageFailed = false; }
@@ -310,13 +317,12 @@ function renderSale() {
   if (checkout) { if (state.cart.length) return renderCheckout(); closeCheckout(); }
   const v = $('view'); v.className = 'sale';
   const qty = {}; state.cart.forEach(l => qty[l.key] = l.qty);
-  // 상품 칸: 종류별 연한 색 상자, 가나다순("실속있는"은 빼고 정렬해 도라지환 옆에 실속있는도라지환이 오게). 포수·용량이 있는 전체 이름을 굵게.
+  // 상품 칸: 종류별 연한 색 상자, 순서는 설정의 제품 목록 순서 그대로. 포수·용량이 있는 전체 이름을 굵게.
   // 선택하면 바탕이 진해지고 같은 색 굵은 테두리와 파란 체크가 붙고, 다시 누르면 해제됩니다. 수량은 결제 확인 화면에서 바꿉니다.
   const tile = p => { const {base, spec} = splitName(p.name); return `<button class="tile g${groupOf(p.name)}${qty[p.id]?' in':''}" data-a="add" data-v="${esc(p.id)}">
       <span class="n">${esc(base)}</span><span class="p">${won(p.price)}원${spec?`<small>· ${esc(spec)}</small>`:''}</span>
       ${qty[p.id]?'<svg class="chk" viewBox="0 0 24 24" aria-label="선택됨"><path d="M6 12.5l4 4L18 8" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>':''}</button>`; };
-  const sortKey = n => splitName(n).base.replace(/^실속있는/, '');
-  const ordered = [...state.products].sort((a, b) => sortKey(a.name).localeCompare(sortKey(b.name), 'ko') || a.name.localeCompare(b.name, 'ko'));
+  const ordered = state.products;
   const sections = `<div class="grid">${ordered.map(tile).join('')}<button class="tile other" data-a="custom">+ 직접 입력</button><button class="tile other" data-a="clear"${state.cart.length?'':' disabled'}>선택 해제</button></div>`;
   const count = state.cart.filter(l => l.key !== DISCOUNT).reduce((a, l) => a + l.qty, 0);
   keepScroll('.groups', () => {
