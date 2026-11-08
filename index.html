@@ -172,7 +172,7 @@ dialog label input{display:block;width:100%;margin-top:4px;font-size:18px;color:
 <script>
 (() => {
 'use strict';
-const APP_VERSION = '2026-11-08.35';
+const APP_VERSION = '2026-11-08.36';
 const KEY = 'megashow-ledger-v1';
 const PAYS = ['카드', '현금', '계좌이체'];
 const TABS = [['sale', '판매'], ['history', '내역'], ['close', '마감'], ['settings', '설정']];
@@ -298,8 +298,8 @@ function keepScroll(sel, fn) {
 function storageAlert() { return storageFailed ? '<div class="alert">저장에 실패했습니다. 지금 바로 마감 화면에서 파일로 내보내세요.</div>' : ''; }
 // 상품명으로 묶음과 바탕색을 정합니다.
 function groupOf(name) {
-  if (name.includes('농축')) return '농축';
-  if (/차|우슬즙|헛개즙|청안비결/.test(name)) return '차';
+  if (/농축|청안비결/.test(name)) return '농축';
+  if (/차|우슬즙|헛개즙/.test(name)) return '차';
   if (/환|라이블리|맨피던스|속풀강황/.test(name)) return '환';
   return '기타';
 }
