@@ -172,7 +172,7 @@ dialog label input{display:block;width:100%;margin-top:4px;font-size:18px;color:
 <script>
 (() => {
 'use strict';
-const APP_VERSION = '2026-11-08.40';
+const APP_VERSION = '2026-11-09.41';
 const KEY = 'megashow-ledger-v1';
 const PAYS = ['카드', '현금', '계좌이체'];
 const TABS = [['sale', '판매'], ['history', '내역'], ['close', '마감'], ['settings', '설정']];
@@ -195,8 +195,10 @@ const PRODUCTS = [
   ['여주환(30포)',26000],['실속있는여주환, 280g',26000],['벌나무헛개즙(30포)',23000],['라이블리Q(60포)',54000],
   ['속풀강황(60포)',20000],['실속있는강황환, 250g',20000],['도라지환(30포)',26000],['실속있는도라지환, 280g',26000],
   ['양배추환(60포)',35000],['실속있는양배추환, 250g',20000],['청안비결(60포)',36000]];
+// 기기 번호: 기기마다 한 번 자동으로 정하는 4자리(예: 3F7A). 판매대 이름이 비어도 시트에서 어느 기기 기록인지 알 수 있게(2026-11-09).
+function newDeviceId() { return Math.random().toString(16).slice(2, 6).toUpperCase().padEnd(4, '0'); }
 function fresh() {
-  return { eventName:'수원메가쇼', device:'', products:PRODUCTS.map(([name,price]) => ({id:uid(),name,price})),
+  return { eventName:'수원메가쇼', device:'', deviceId:newDeviceId(), products:PRODUCTS.map(([name,price]) => ({id:uid(),name,price})),
     sales:[], cart:[], recon:{}, lastBackup:0, method:'카드', memo:'',
     syncUrl:'', syncKey:'', outbox:{}, syncOk:0, syncErr:'' };
 }
@@ -208,6 +210,7 @@ function load() {
   catch (e) { localStorage.setItem(KEY + '-corrupt-' + Date.now(), raw); state = fresh(); }
   // 2026-11-06.23 이전 버전이 증정 때 자동으로 적어 두고 남긴 메모 "증정"을 한 번 지웁니다.
   if (state.memo === '증정') { state.memo = ''; if (state.method !== '증정') save(); }
+  if (!state.deviceId) { state.deviceId = newDeviceId(); save(); }
   // 2026-11-08.33: 판매 화면 순서를 제품 목록 순서로 바꾸면서, 이미 쓰던 기기의 목록을 기본 순서로 한 번 다시 세웁니다(이름·가격은 그대로, 모르는 이름은 뒤에).
   if ((state.orderV || 0) < 1) {
     const idx = new Map(PRODUCTS.map(([n], i) => [n, i]));
@@ -431,7 +434,7 @@ function renderSettings() {
       <textarea id="prodText" spellcheck="false">${esc(txt)}</textarea><p class="err" id="prodErr"></p>
       <button class="btn save" data-a="saveProducts">제품 목록 저장</button></div>
     <div class="box"><h2>행사와 판매대</h2>
-      <p class="hint">기기를 여러 대 쓰면 판매대 이름을 다르게 적으세요.</p>
+      <p class="hint">기기를 여러 대 쓰면 판매대 이름을 다르게 적으세요. 이 기기 번호: <b>${esc(state.deviceId)}</b></p>
       <div class="row"><input id="evName" placeholder="행사명" value="${esc(state.eventName)}"><input id="devName" placeholder="판매대 이름 (예: 1번 판매대)" value="${esc(state.device)}"><button class="btn save" data-a="saveInfo">저장</button></div></div>
     <div class="box"><h2>자동 전송 (구글 시트)</h2>
       <p class="hint">판매 완료마다 기록을 관리자 구글 시트로 보냅니다. 통신이 끊기면 모아 두었다가 다시 보냅니다. 주소와 비밀번호는 관리자가 알려 줍니다.</p>
@@ -454,7 +457,7 @@ function form(o) {
       ${o.fields.map(f => `<label>${esc(f.label)}<input name="${f.name}" value="${esc(f.value ?? '')}"${f.numeric?' inputmode="numeric"':''} autocomplete="off"></label>`).join('')}
       <p class="err"></p><div class="dlg-actions">
       ${o.extra?`<button type="button" class="btn danger" data-x>${esc(o.extra)}</button>`:''}
-      <button type="button" class="btn" data-c>닫기</button><button class="btn primary">확인</button></div></form>`;
+      ${o.required?'':'<button type="button" class="btn" data-c>닫기</button>'}<button class="btn primary">확인</button></div></form>`;
     const f = dlg.querySelector('form');
     let done = false;
     const finish = v => { if (done) return; done = true; dlg.close(); res(v); };
@@ -464,9 +467,9 @@ function form(o) {
       const err = o.validate ? o.validate(vals) : null;
       if (err) f.querySelector('.err').textContent = err; else finish(vals);
     };
-    f.querySelector('[data-c]').onclick = () => finish(null);
+    const cb = f.querySelector('[data-c]'); if (cb) cb.onclick = () => finish(null);
     const x = f.querySelector('[data-x]'); if (x) x.onclick = () => finish('extra');
-    dlg.oncancel = e => { e.preventDefault(); finish(null); };
+    dlg.oncancel = e => { e.preventDefault(); if (!o.required) finish(null); };
     dlg.showModal();
     const first = f.querySelector('input'); if (first) { first.focus(); first.select(); }
   });
@@ -563,7 +566,7 @@ async function syncNow() {
   syncing = true;
   const batch = Object.values(state.outbox).slice(0, 50);
   try {
-    const r = await fetch(state.syncUrl, {method:'POST', body: JSON.stringify({app:'megashow-ledger', key:state.syncKey, event:state.eventName, sales:batch})});
+    const r = await fetch(state.syncUrl, {method:'POST', body: JSON.stringify({app:'megashow-ledger', key:state.syncKey, event:state.eventName, sales:batch.map(b => ({...b, device: b.device || state.device, deviceId: b.deviceId || state.deviceId}))})});
     const j = await r.json();
     if (!j.ok) throw new Error(j.error || '시트가 거부했습니다.');
     batch.forEach(b => { const cur = state.outbox[b.id]; if (cur && cur.updatedAt === b.updatedAt) delete state.outbox[b.id]; });
@@ -701,7 +704,7 @@ const actions = {
     if (!canPay()) return;
     const method = state.method, memo = state.memo.trim();
     const now = Date.now(), snapshot = state.cart.map(l => ({...l}));
-    const sale = {id:uid(), ts:now, updatedAt:now, date:dateOf(now), items:snapshot, total:cartTotal(), pay:method, device:state.device, canceled:false, memo};
+    const sale = {id:uid(), ts:now, updatedAt:now, date:dateOf(now), items:snapshot, total:cartTotal(), pay:method, device:state.device, deviceId:state.deviceId, canceled:false, memo};
     state.sales.push(sale); state.cart = []; state.method = '카드'; state.memo = '';
     queueSync(sale); save(); closeCheckout(); render();
     if (navigator.vibrate) navigator.vibrate(40);
@@ -797,6 +800,14 @@ window.addEventListener('storage', e => { if (e.key === KEY) { load(); render();
 document.addEventListener('visibilitychange', () => { if (!document.hidden) renderChrome(); });
 
 load(); render();
+// 판매대 이름이 비어 있으면 처음 열 때 묻습니다(필수). 시트에서 누구 기록인지 알 수 있게(2026-11-09).
+async function askDevice() {
+  if (state.device) return;
+  const v = await form({title:'판매대 이름을 넣어 주세요', required:true, fields:[{name:'name', label:'직원 이름 또는 판매대 (예: 이정은, 1번 판매대)'}],
+    validate: x => x.name.trim() ? null : '이름을 넣어야 시작할 수 있습니다.'});
+  state.device = v.name.trim(); save(); render(); showToast('판매대 이름을 저장했습니다. 설정에서 바꿀 수 있습니다.');
+}
+askDevice();
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
 // 파일로 직접 열 때는 브라우저가 설정 파일을 막으므로 웹 주소일 때만 연결합니다.
 if (location.protocol !== 'file:') { const m = document.createElement('link'); m.rel = 'manifest'; m.href = 'manifest.webmanifest'; document.head.appendChild(m); }
